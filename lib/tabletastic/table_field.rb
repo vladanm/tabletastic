@@ -19,7 +19,9 @@ module Tabletastic
       # Get the attribute or association in question
       result = send_or_call(record, method_or_proc)
       # If we already have a string, just return it
-      return result if result.is_a?(String)
+      case result.class.name
+      when String then return result
+      when Date, DateTime, Time then return result.strftime("%Y-%m-%d") end
 
       # If we don't have a string, its likely an association
       # Try to detect which method to use for stringifying the attribute
