@@ -19,7 +19,7 @@ module Tabletastic
       # Get the attribute or association in question
       result = send_or_call(record, method_or_proc)
       # If we already have a string, just return it
-      case result.class.name
+      case result
       when String then return result
       when Date, DateTime, Time then return result.strftime("%Y-%m-%d") end
 
