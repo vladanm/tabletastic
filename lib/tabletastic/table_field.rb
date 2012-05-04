@@ -21,7 +21,7 @@ module Tabletastic
       # If we already have a string, just return it
       case result
       when String then return result
-      when Date, DateTime, Time then return result.strftime("%Y-%m-%d") end
+      when Date, DateTime, Time then return result.strftime("%Y-%m-%d %H:%M") end
 
       # If we don't have a string, its likely an association
       # Try to detect which method to use for stringifying the attribute
