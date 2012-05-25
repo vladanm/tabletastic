@@ -6,7 +6,9 @@ module Tabletastic
       klass = default_class_for(collection)
       options = args.extract_options!
       initialize_html_options(options, klass)
-      result = capture { block.call(TableBuilder.new(collection, klass, self)) }
+      result = capture do
+        block.call(TableBuilder.new(collection, klass, self, params))
+      end
       content_tag(:table, result, options[:html])
     end
 

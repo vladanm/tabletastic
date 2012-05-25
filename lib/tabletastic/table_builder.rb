@@ -7,8 +7,8 @@ module Tabletastic
 
     attr_reader   :collection, :klass, :table_fields
 
-    def initialize(collection, klass, template)
-      @collection, @klass, @template = collection, klass, template
+    def initialize(collection, klass, template, params)
+      @collection, @klass, @template, @params = collection, klass, template, params
       @table_fields = []
     end
 
@@ -28,6 +28,14 @@ module Tabletastic
         yield self
       else
         @table_fields = args.empty? ? orm_fields : args.collect {|f| TableField.new(f.to_sym)}
+        @sortable_fields = options[:sortables] || []
+        @current_sortable = [:created_at, "DESC"]
+        if @sortable_fields.include?(@params[:sort_by].try(:to_sym))
+          @current_sortable[0] = @params[:sort_by].to_sym
+        end
+        if ["ASC", "DESC"].include?(@params[:sort])
+          @current_sortable[1] = @params[:sort]
+        end
       end
       action_cells(options[:actions], options[:action_prefix])
       ["\n", head, "\n", body, "\n"].join("").html_safe
@@ -59,7 +67,7 @@ module Tabletastic
       options.merge!(:klass => klass)
       args << options
       @table_fields << TableField.new(*args, &proc)
-      # Since this will likely be called with <%= %> (aka 'concat'), explicitly return an 
+      # Since this will likely be called with <%= %> (aka 'concat'), explicitly return an
       # empty string; this suppresses unwanted output
       return ""
     end
@@ -68,7 +76,24 @@ module Tabletastic
       content_tag(:thead) do
         content_tag(:tr) do
           @table_fields.inject("") do |result,field|
-            result + content_tag(:th, field.heading, field.heading_html)
+            if @sortable_fields.include?(field.method)
+
+              sort = if @current_sortable[0] == field.method
+                       @current_sortable[1] == "ASC" ? "DESC" : "ASC"
+                     else
+                       "DESC"
+                     end
+
+              qs = "?sort_by=#{field.method}&sort=#{sort}"
+              opts = (field.heading_html || {})
+              if @current_sortable[0] == field.method
+                opts[:class] = ((opts[:class] || "").split << "sorted").join(" ")
+              end
+              txt = field.heading
+              result + content_tag(:th, content_tag(:a, txt, {href: qs}), opts)
+            else
+              result + content_tag(:th, field.heading, field.heading_html)
+            end
           end.html_safe
         end
       end
@@ -87,7 +112,11 @@ module Tabletastic
 
     def cells_for_row(record)
       @table_fields.inject("") do |cells, field|
-        cells + content_tag(:td, field.cell_data(record), field.cell_html)
+        opts = field.cell_html || {}
+        if @current_sortable[0] == field.method
+          opts[:class] = ((opts[:class] || "").split << "sorted").join(" ")
+        end
+        cells + content_tag(:td, field.cell_data(record), opts)
       end.html_safe
     end
 
