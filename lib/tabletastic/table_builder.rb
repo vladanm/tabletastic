@@ -37,6 +37,8 @@ module Tabletastic
           @current_sortable[1] = @params[:sort]
         end
       end
+      @cell_links = options[:links]
+      @cell_prefix = options[:action_prefix]
       action_cells(options[:actions], options[:action_prefix])
       ["\n", head, "\n", body, "\n"].join("").html_safe
     end
@@ -116,7 +118,24 @@ module Tabletastic
         if @current_sortable[0] == field.method
           opts[:class] = ((opts[:class] || "").split << "sorted").join(" ")
         end
-        cells + content_tag(:td, field.cell_data(record), opts)
+        
+        #still unconfortable with ruby variable scopes, damn you Denis Richie, playing it safe
+        do_action = false
+        do_link_action = ""
+        @cell_links.each do |link_field,link_action|
+          if link_field == field.method
+            do_action = "actions #{link_action.to_s}_link"
+            do_link_action = link_action
+          end
+        end
+
+        if do_action
+          #lets get dirty
+          action_path = "/#{@params[:controller]}/#{record[:id]}/#{do_link_action}"
+          cells + content_tag(:td, content_tag(:a, field.cell_data(record), {href: action_path, class: do_action}), opts)
+        else
+          cells + content_tag(:td, field.cell_data(record), opts)
+        end
       end.html_safe
     end
 
