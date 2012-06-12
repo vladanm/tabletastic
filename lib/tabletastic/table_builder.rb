@@ -37,7 +37,7 @@ module Tabletastic
           @current_sortable[1] = @params[:sort]
         end
       end
-      @cell_links = options[:links]
+      @cell_links = options[:links] || []
       @cell_prefix = options[:action_prefix]
       action_cells(options[:actions], options[:action_prefix])
       ["\n", head, "\n", body, "\n"].join("").html_safe
