@@ -144,8 +144,16 @@ module Tabletastic
       return if actions.blank?
       actions = [actions] if !actions.respond_to?(:each)
       actions = [:show, :edit, :destroy] if actions == [:all]
-      actions.each do |action|
-        action_link(action.to_sym, prefix)
+      actions.each_with_index do |action,index|
+        if prefix.is_a?(Array)
+          prefix_element = prefix[index]
+          unless prefix_element
+            prefix_element = prefix[0]
+          end
+        else
+          prefix_element = prefix
+        end
+        action_link(action.to_sym, prefix_element)
       end
     end
 
