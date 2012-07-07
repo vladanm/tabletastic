@@ -27,7 +27,7 @@ module Tabletastic
       if block_given?
         yield self
       else
-        @table_fields = args.empty? ? orm_fields : args.collect {|f| TableField.new(f.to_sym)}
+        @table_fields += args.empty? ? orm_fields : args.collect {|f| TableField.new(f.to_sym)}
         @sortable_fields = options[:sortables] || []
         @current_sortable = [:created_at, "DESC"]
         if @sortable_fields.include?(@params[:sort_by].try(:to_sym))
@@ -37,10 +37,25 @@ module Tabletastic
           @current_sortable[1] = @params[:sort]
         end
       end
+
+      if (options[:mass_actions])
+        @table_fields = [TableField.new(:mass_actions)] + @table_fields
+      end
+
+      @mass_action = options[:mass_actions]
+      @mass_action_prefix = options[:mass_action_prefix]
       @cell_links = options[:links] || []
       @cell_prefix = options[:action_prefix]
       action_cells(options[:actions], options[:action_prefix])
       ["\n", head, "\n", body, "\n"].join("").html_safe
+    end
+    
+    def mass_actions
+       @mass_action
+    end
+
+    def mass_actions_prefix
+       @mass_action_prefix
     end
 
     # individually specify a column, which will build up the header,
@@ -75,6 +90,7 @@ module Tabletastic
     end
 
     def head
+            
       content_tag(:thead) do
         content_tag(:tr) do
           @table_fields.inject("") do |result,field|
@@ -90,6 +106,9 @@ module Tabletastic
               opts = (field.heading_html || {})
               if @current_sortable[0] == field.method
                 opts[:class] = ((opts[:class] || "").split << "sorted").join(" ")
+              end
+              if field.method == :mass_action
+                next
               end
               txt = field.heading
               result + content_tag(:th, content_tag(:a, txt, {href: qs}), opts)
@@ -113,6 +132,7 @@ module Tabletastic
     end
 
     def cells_for_row(record)
+
       @table_fields.inject("") do |cells, field|
         opts = field.cell_html || {}
         if @current_sortable[0] == field.method
@@ -128,8 +148,11 @@ module Tabletastic
             do_link_action = link_action
           end
         end
-
-        if do_action
+        
+        #make checkbox column for mass actions
+        if field.method == :mass_actions
+          cells + content_tag(:td, content_tag(:input, "", type: "checkbox", id: record[:id], name: "leads_ids[#{record[:id]}]"))
+        elsif do_action
           #lets get dirty
           action_path = "/#{@params[:controller]}/#{record[:id]}/#{do_link_action}"
           cells + content_tag(:td, content_tag(:a, field.cell_data(record), {href: action_path, class: do_action}), opts)

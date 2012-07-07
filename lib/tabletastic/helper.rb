@@ -7,9 +7,27 @@ module Tabletastic
       options = args.extract_options!
       initialize_html_options(options, klass)
       result = capture do
-        block.call(TableBuilder.new(collection, klass, self, params))
+        block.call(@table = TableBuilder.new(collection, klass, self, params))
       end
-      content_tag(:table, result, options[:html])
+      
+      mass_action = @table.mass_actions
+      mass_action_prefix = @table.mass_actions_prefix
+      
+      if (mass_action)
+        @selection = [[" ", -1]] #default no action
+        mass_action.each do |maction|
+          @selection << [maction.to_s,maction]
+        end
+        form_tag("#{mass_action_prefix}/mass_actions", id: "form_#{options[:html][:id]}", name: "form_#{options[:html][:id]}", method: :post) do
+          
+          content = content_tag(:div, align: "right") do
+            select_tag :mass_actions, options_for_select(@selection), onChange: "form_#{options[:html][:id]}.submit();"
+          end
+          content += content_tag(:table, result, options[:html])
+        end
+      else
+        content = content_tag(:table, result, options[:html])
+      end
     end
 
     private
